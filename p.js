@@ -41,7 +41,6 @@ function imprimirMensaje(mensaje) {
     parrafo.textContent = mensaje;
 }
 function elegirJugadorInicia() { 
-    console.log(ficha_elegida);
     inicializarEventoBotones();   
     if(Math.floor(Math.random() * 2) == 0) {
         imprimirMensaje("Es tu turno");
@@ -50,14 +49,19 @@ function elegirJugadorInicia() {
         buscarMejorPosicion();
     }
 }
-function fichasElegidas(arreglo) {
+function turnosTirados(arreglo) {
+    /* Verifica el número de turnos que se han jugado */
     var arre = arreglo.reduce((arre, reg, idx) => {
         if(reg != 0) arre.push(idx);
         return arre;
     },[])
     return (arre === undefined) ? 0 : arre.length;
 }
-function posicionesDisponibles(arreglo) {
+function estaDisponible(posicion) {
+    /* Verifica si la posicion recibida está ocupada por una ficha */
+    return tablero[posicion] == 0;
+}
+function obtenerPosicionesDisponibles(arreglo) {
     /* Retorna un arreglo con todas las posiciones libres */
     var arre = arreglo.reduce( (arre,reg,idx) => {
         if(reg === 0) arre.push(idx);
@@ -68,12 +72,13 @@ function posicionesDisponibles(arreglo) {
 function inicializarEventoBotones() {
     btnsTablero.forEach((boton,idx) => {
         boton.addEventListener('click',() => {
-            if(fichasElegidas(tablero) < 9) {
+            if(turnosTirados(tablero) < 9) {
                 boton.style.backgroundImage = `url('img/${ficha_elegida}.png')`;
                 tablero[idx] = ficha_jug;
                 validarVictoria(ficha_jug);
                 btnsTablero.forEach(btn => btn.disabled = true)
                 setTimeout(buscarMejorPosicion,1000); 
+                imprimirMensaje("Buscando mejor tiro bi bop bi bop...");
             }      
         })
     })
@@ -87,16 +92,54 @@ function validarVictoria(ficha_id) {
     })
 }
 function buscarMejorPosicion() {
-    if(fichasElegidas(tablero) < 9) {
-        var arreglo = posicionesDisponibles(tablero);
-        var x = Math.floor(Math.random() * arreglo.length);
-        tablero[arreglo[x]] = ficha_ia;   
-        btnsTablero[arreglo[x]].style.backgroundImage = `url('img/${(ficha_elegida === 'circulo') ? 'cruz' : 'circulo'}.png')`;
+    if(turnosTirados(tablero) < 9) {
+        var arreglo = tiroDefensivo();        
+        if(arreglo.length == 0) arreglo = obtenerPosicionesDisponibles(tablero);
+        console.log("Arreglo:");
+        console.log(arreglo);
+        var x = Math.floor(Math.random() * arreglo.length);        
+        tiro = (arreglo.includes(4)) ? 4 : arreglo[x];  
+        tablero[tiro] = ficha_ia;   
+        console.log("Tiro:");
+        console.log(tiro);
+        btnsTablero[tiro].style.backgroundImage = `url('img/${(ficha_elegida === 'circulo') ? 'cruz' : 'circulo'}.png')`;
         validarVictoria(ficha_ia);
-        activarBotonesDisponibles(tablero)
+        activarBotonesDisponibles();
+        imprimirMensaje("Es tu turno");
     }    
 }
-function activarBotonesDisponibles(tablero) {
+const tiroDefensivo = () => {
+    console.log("Defensa");
+    var tirosJugador = obtenerTirosFicha(ficha_jug);
+    var arreglo = movsGanadores.reduce((arre, reg, idx) => {  
+        var tiro;      
+        if( tablero[reg.pini] == ficha_jug && tablero[reg.pmed] == ficha_jug && tablero[reg.pfin] != ficha_jug)
+            tiro = reg.pfin;//arre.push(reg.pfin);    
+        if( tablero[reg.pini] == ficha_jug && tablero[reg.pmed] != ficha_jug && tablero[reg.pfin] && ficha_jug)  
+            tiro = reg.pmed;//arre.push(reg.pmed);
+        if( tablero[reg.pini] != ficha_jug && tablero[reg.pmed] != ficha_jug && tablero[reg.pfin] && ficha_jug)  
+            tiro = reg.pini;//arre.push(reg.pini); 
+        if(estaDisponible(tiro))
+            arre.push(tiro);        
+        return arre;
+    },[])
+    return arreglo;
+}
+function eliminarRepetidos() {
+
+}
+const tiroOfensivo = () => {
+    console.log("Ofensa");
+}
+function obtenerTirosFicha(ficha) {
+    var arreglo = tablero.reduce((arre, reg, idx) => {
+        if(tablero[idx] == ficha)
+            arre.push(idx);
+        return arre;
+    },[])
+    return arreglo;
+}
+function activarBotonesDisponibles() {
     tablero.forEach((pos,idx)=>{
         if(pos == 0)   btnsTablero[idx].disabled = false;
     })
