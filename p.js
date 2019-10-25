@@ -35,7 +35,7 @@ const movsGanadores = [
 ]
 const ficha_jug = 1;
 const ficha_ia = 2;
-var btnsTablero = document.querySelectorAll("#tablero button");
+const btnsTablero = document.querySelectorAll("#tablero button");
 function imprimirMensaje(mensaje) {
     var parrafo = document.querySelector("#msj-inicia");
     parrafo.textContent = mensaje;
@@ -83,53 +83,53 @@ function inicializarEventoBotones() {
         })
     })
 }
-function validarVictoria(ficha_id) {
+function validarVictoria(ficha) {
+    /* Verificar si uno de los participantes ha hecho un cruce ganador */
     movsGanadores.forEach(fila=>{
-        if(tablero[fila.pini] == ficha_id && tablero[fila.pmed] == ficha_id && tablero[fila.pfin] == ficha_id) 
+        if(tablero[fila.pini] == ficha && tablero[fila.pmed] == ficha && tablero[fila.pfin] == ficha) 
         {
-            console.log("victoria de: " + ficha_id);
+            imprimirMensaje((ficha == ficha_jug) ? "He ganado" : "Haz ganado" );
         }
     })
 }
 function buscarMejorPosicion() {
     if(turnosTirados(tablero) < 9) {
-        var arreglo = tiroDefensivo();        
+        var arreglo = (tiroOfensivo().length > 0) ? tiroOfensivo() : tiroDefensivo();
+        console.log("Arreglo de tiro defensivo: " + arreglo);        
         if(arreglo.length == 0) arreglo = obtenerPosicionesDisponibles(tablero);
-        console.log("Arreglo:");
-        console.log(arreglo);
+        console.log("Arreglo obtenido de posibles tiros:" + arreglo);
         var x = Math.floor(Math.random() * arreglo.length);        
-        tiro = (arreglo.includes(4)) ? 4 : arreglo[x];  
+        tiro = (arreglo.includes(4)) ? 4 : arreglo[x];  //areglar, analizar casos para el uso del centro
         tablero[tiro] = ficha_ia;   
-        console.log("Tiro:");
-        console.log(tiro);
+        console.log("Tiro(posición) elegido:" + tiro);
         btnsTablero[tiro].style.backgroundImage = `url('img/${(ficha_elegida === 'circulo') ? 'cruz' : 'circulo'}.png')`;
         validarVictoria(ficha_ia);
         activarBotonesDisponibles();
         imprimirMensaje("Es tu turno");
     }    
 }
-const tiroDefensivo = () => {
-    console.log("Defensa");
-    var tirosJugador = obtenerTirosFicha(ficha_jug);
+const posicionesDeTiroGanador = (ficha) => {
     var arreglo = movsGanadores.reduce((arre, reg, idx) => {  
         var tiro;      
-        if( tablero[reg.pini] == ficha_jug && tablero[reg.pmed] == ficha_jug && tablero[reg.pfin] != ficha_jug)
-            tiro = reg.pfin;//arre.push(reg.pfin);    
-        if( tablero[reg.pini] == ficha_jug && tablero[reg.pmed] != ficha_jug && tablero[reg.pfin] && ficha_jug)  
-            tiro = reg.pmed;//arre.push(reg.pmed);
-        if( tablero[reg.pini] != ficha_jug && tablero[reg.pmed] != ficha_jug && tablero[reg.pfin] && ficha_jug)  
-            tiro = reg.pini;//arre.push(reg.pini); 
+        if( tablero[reg.pini] == ficha && tablero[reg.pmed] == ficha && tablero[reg.pfin] != ficha)
+            tiro = reg.pfin;
+        if( tablero[reg.pini] == ficha && tablero[reg.pmed] != ficha && tablero[reg.pfin] == ficha)  
+            tiro = reg.pmed;
+        if( tablero[reg.pini] != ficha && tablero[reg.pmed] == ficha && tablero[reg.pfin] == ficha)  
+            tiro = reg.pini;
         if(estaDisponible(tiro))
             arre.push(tiro);        
         return arre;
     },[])
     return arreglo;
 }
-function eliminarRepetidos() {
-
+const tiroDefensivo = () => {
+    console.log("Defensa");
+    return posicionesDeTiroGanador(ficha_jug);
 }
 const tiroOfensivo = () => {
     console.log("Ofensa");
+    return posicionesDeTiroGanador(ficha_ia);
 }
 function obtenerTirosFicha(ficha) {
     var arreglo = tablero.reduce((arre, reg, idx) => {
