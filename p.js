@@ -33,6 +33,7 @@ const movsGanadores = [
     {pini : 3, pmed: 4, pfin: 5},
     {pini : 6, pmed: 7, pfin: 8},
 ]
+let juegoFinalizado = false;
 const ficha_jug = 1;
 const ficha_ia = 2;
 const btnsTablero = document.querySelectorAll("#tablero button");
@@ -72,7 +73,7 @@ function obtenerPosicionesDisponibles(arreglo) {
 function inicializarEventoBotones() {
     btnsTablero.forEach((boton,idx) => {
         boton.addEventListener('click',() => {
-            if(turnosTirados(tablero) < 9) {
+            if(turnosTirados(tablero) < 9 && !juegoFinalizado) {
                 boton.style.backgroundImage = `url('img/${ficha_elegida}.png')`;
                 tablero[idx] = ficha_jug;
                 btnsTablero.forEach(btn => btn.disabled = true)
@@ -89,49 +90,49 @@ function validarVictoria(ficha) {
         if(tablero[fila.pini] == ficha && tablero[fila.pmed] == ficha && tablero[fila.pfin] == ficha) 
         {
             imprimirMensaje((ficha == ficha_jug) ? "Haz ganado" : "He ganado" );
+            juegoFinalizado = true;
         }
     })
 }
 function buscarMejorPosicion() {
-    if(turnosTirados(tablero) < 9) {
-        var arreglo = (tiroOfensivo().length > 0) ? tiroOfensivo() : tiroDefensivo();
-        console.log("Arreglo de cruce defensivo/ofensivo: " + arreglo);        
-        if(arreglo.length == 0) arreglo = posibleJugada(ficha_ia);
-        console.log("Arreglo de iniciar jugada: " + arreglo);        
-        if(arreglo.length == 0) arreglo = posibleJugada(ficha_jug);
-        console.log("Arreglo de iniciar jugada: " + arreglo);        
-        if(arreglo.length == 0) arreglo = obtenerPosicionesDisponibles(tablero);
-        console.log("Arreglo aleatorio: " + arreglo);        
-
-
-        console.log("\n\nArreglo obtenido de posibles tiros:" + arreglo);
-        var x = Math.floor(Math.random() * arreglo.length);        
-        tiro = (arreglo.includes(4)) ? 4 : arreglo[x];  //areglar, analizar casos para el uso del centro
+    if(turnosTirados(tablero) < 9 && !juegoFinalizado) {
+        var tiro = obtenerTiro();
         tablero[tiro] = ficha_ia;   
-        console.log("Tiro(posición) elegido:" + tiro);
         btnsTablero[tiro].style.backgroundImage = `url('img/${(ficha_elegida === 'circulo') ? 'cruz' : 'circulo'}.png')`;
         activarBotonesDisponibles();
         imprimirMensaje("Es tu turno");
         validarVictoria(ficha_ia);
     }    
 }
+const obtenerTiro = () => {
+    var arreglo = (tiroOfensivo().length > 0) ? tiroOfensivo() : tiroDefensivo();
+    if(arreglo.length == 0) arreglo = posibleJugada(ficha_ia);
+    if(arreglo.length == 0) arreglo = posibleJugada(ficha_jug);
+    if(arreglo.length == 0) arreglo = obtenerPosicionesDisponibles(tablero);
+    console.log("Arreglo de tiros: " + arreglo);        
+    var x = Math.floor(Math.random() * arreglo.length);        
+    tiro = (arreglo.includes(4)) ? 4 : arreglo[x];  //areglar, analizar casos para el uso del centro
+    return tiro;
+}
 const posibleJugada = (ficha) => {
     var arreglo = movsGanadores.reduce((arre, reg, idx) => {  
-        var tiro;      
-        if( tablero[reg.pini] == ficha && estaDisponible(tablero[reg.pmed]) && estaDisponible(tablero[reg.pfin]))
-            tiro = reg.pini;
-        if( tablero[reg.pmed] == ficha && estaDisponible(tablero[reg.pmed]) && estaDisponible(tablero[reg.pfin]))  
-            tiro = reg.pmed;
-        if( tablero[reg.pfin] == ficha && estaDisponible(tablero[reg.pmed])  && estaDisponible(tablero[reg.pfin]))  
-            tiro = reg.pfin;
-        if(estaDisponible(tiro))
-            arre.push(tiro);        
+        if( tablero[reg.pini] == ficha && estaDisponible(reg.pmed) && estaDisponible(reg.pfin)) {
+            arre.push(reg.pmed);
+            arre.push(reg.pfin);
+        }
+        if( tablero[reg.pmed] == ficha && estaDisponible(reg.pini) && estaDisponible(reg.pfin)) {
+            arre.push(reg.pini);
+            arre.push(reg.pfin);
+        }             
+        if( tablero[reg.pfin] == ficha && estaDisponible(reg.pmed)  && estaDisponible(reg.pini))  {
+            arre.push(reg.pmed);
+            arre.push(reg.pini);
+        }         
         return arre;
     },[])
     return arreglo;
 }
 const posicionesDeTiroGanador = (ficha) => {
-     console.log("Iniciar jugada ofensiva");
      var arreglo = movsGanadores.reduce((arre, reg, idx) => {  
         var tiro;      
         if( tablero[reg.pini] == ficha && tablero[reg.pmed] == ficha && tablero[reg.pfin] != ficha)
@@ -147,11 +148,9 @@ const posicionesDeTiroGanador = (ficha) => {
     return arreglo;
 }
 const tiroDefensivo = () => {
-    console.log("Bloque de defensa");
     return posicionesDeTiroGanador(ficha_jug);
 }
 const tiroOfensivo = () => {
-    console.log("Cruce ofensivo");
     return posicionesDeTiroGanador(ficha_ia);
 }
 function obtenerTirosFicha(ficha) {
